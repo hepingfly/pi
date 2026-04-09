@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>π 中的你 — 在圆周率中找到你的生日</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Ma+Shan+Zheng&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080814;
+    --card-bg: rgba(10, 15, 40, 0.78);
+    --gold: #F4C430;
+    --gold-glow: rgba(244, 196, 48, 0.6);
+    --cyan: #7DF9FF;
+    --white: rgba(255, 255, 255, 0.88);
+    --dim: rgba(255, 255, 255, 0.42);
+    --border: rgba(244, 196, 48, 0.28);
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Playfair Display', serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Canvas 背景 ── */
+  #bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── 页面容器 ── */
+  #app {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px 40px;
+  }
+
+  /* ── 通用 section ── */
+  .screen {
+    display: none;
+    width: 100%;
+    max-width: 430px;
+    flex-direction: column;
+    align-items: center;
+  }
+  .screen.active { display: flex; }
+
+  /* ════════════════════════════════
+     INTRO SCREEN
+  ════════════════════════════════ */
+  #screen-intro {
+    gap: 0;
+  }
+
+  .intro-pi-symbol {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(4rem, 20vw, 6rem);
+    color: var(--gold);
+    line-height: 1;
+    text-shadow: 0 0 60px var(--gold-glow), 0 0 120px rgba(244,196,48,0.25);
+    animation: fadeInDown 0.7s ease both;
+    margin-bottom: 8px;
+  }
+
+  .intro-title {
+    font-size: clamp(1.8rem, 7vw, 2.4rem);
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: 0.04em;
+    text-align: center;
+    animation: fadeInUp 0.7s 0.15s ease both;
+    margin-bottom: 10px;
+  }
+
+  .intro-subtitle {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.7rem, 3vw, 0.82rem);
+    color: var(--cyan);
+    text-align: center;
+    letter-spacing: 0.06em;
+    line-height: 1.7;
+    animation: fadeInUp 0.7s 0.3s ease both;
+    margin-bottom: 40px;
+    opacity: 0.85;
+  }
+
+  /* 输入卡片 */
+  .input-card {
+    width: 100%;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px 36px 44px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 0 40px rgba(244,196,48,0.08), inset 0 0 60px rgba(0,0,60,0.3);
+    animation: fadeInUp 0.7s 0.45s ease both;
+  }
+
+  .input-label-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .input-group label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  .input-group input[type="number"] {
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 18px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--white);
+    text-align: center;
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .input-group input[type="number"]::-webkit-inner-spin-button,
+  .input-group input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .input-group input[type="number"]:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(244,196,48,0.18);
+  }
+
+  .input-hint {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--dim);
+    text-align: center;
+    letter-spacing: 0.05em;
+    margin-top: 14px;
+  }
+
+  .error-msg {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: #ff6b6b;
+    text-align: center;
+    margin-top: 10px;
+    min-height: 1.2em;
+    letter-spacing: 0.04em;
+  }
+
+  /* 搜索按钮 */
+  .btn-search {
+    margin-top: 28px;
+    width: 100%;
+    min-height: 62px;
+    background: linear-gradient(135deg, #c9a227 0%, #F4C430 50%, #e8b820 100%);
+    border: none;
+    border-radius: 16px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0a0a1a;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 28px rgba(244,196,48,0.4);
+  }
+  .btn-search::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.18) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .btn-search:active { transform: scale(0.97); box-shadow: 0 2px 12px rgba(244,196,48,0.2); }
+
+  /* 底部装饰 */
+  .intro-deco {
+    margin-top: 28px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 0.08em;
+    text-align: center;
+    animation: fadeInUp 0.7s 0.6s ease both;
+  }
+
+  /* ════════════════════════════════
+     SEARCHING SCREEN
+  ════════════════════════════════ */
+  #screen-searching {
+    gap: 24px;
+    text-align: center;
+  }
+
+  .search-scanner {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    box-shadow: 0 0 30px rgba(244,196,48,0.3);
+  }
+  .search-scanner::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(244,196,48,0.2);
+    animation: pulse-ring 1.5s ease-out infinite;
+  }
+  .search-scanner-inner {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    color: var(--gold);
+    text-shadow: 0 0 20px var(--gold-glow);
+  }
+
+  .search-status {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+    color: var(--cyan);
+    letter-spacing: 0.06em;
+    min-height: 2em;
+    opacity: 0.9;
+  }
+
+  /* 数字滚动区 */
+  .search-digits-wrap {
+    width: 100%;
+    overflow: hidden;
+    height: 120px;
+    mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+  }
+  .search-digits {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    color: rgba(244,196,48,0.35);
+    letter-spacing: 0.15em;
+    word-break: break-all;
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  /* 进度条 */
+  .progress-wrap {
+    width: 100%;
+    height: 2px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(to right, rgba(244,196,48,0.5), var(--gold));
+    border-radius: 2px;
+    transition: width 2s linear;
+    box-shadow: 0 0 8px var(--gold);
+  }
+
+  /* ════════════════════════════════
+     RESULT SCREEN
+  ════════════════════════════════ */
+  #screen-result {
+    gap: 0;
+  }
+
+  .result-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--gold);
+    letter-spacing: 0.18em;
+    text-align: center;
+    opacity: 0.7;
+    margin-bottom: 18px;
+    animation: fadeInDown 0.5s 0.1s ease both;
+  }
+
+  .result-card {
+    width: 100%;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px 22px 28px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow:
+      0 0 60px rgba(244,196,48,0.12),
+      0 0 120px rgba(0,20,80,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.07);
+    position: relative;
+    overflow: hidden;
+    animation: scaleIn 0.5s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  /* 卡片顶部光晕装饰 */
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: 50%;
+    transform: translateX(-50%);
+    width: 200px; height: 120px;
+    background: radial-gradient(ellipse, rgba(244,196,48,0.12), transparent 70%);
+    pointer-events: none;
+  }
+
+  .result-card-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    color: var(--dim);
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .result-position-wrap {
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .result-position-pre {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+  }
+
+  .result-position-num {
+    display: block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.6rem, 15vw, 5.6rem);
+    font-weight: 400;
+    color: var(--gold);
+    line-height: 1.0;
+    letter-spacing: 0.06em;
+    text-shadow:
+      0 0 20px rgba(244,196,48,0.7),
+      0 0 50px rgba(244,196,48,0.35),
+      0 2px 0 rgba(180,130,0,0.6),
+      0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  .result-position-post {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.06em;
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* π 数字串 */
+  .result-pi-strip {
+    margin: 20px 0 18px;
+    padding: 14px 12px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+    text-align: center;
+    overflow-x: auto;
+  }
+
+  .result-pi-text {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.78rem, 3.5vw, 1rem);
+    color: rgba(255,255,255,0.38);
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .result-pi-text .birthday-highlight {
+    color: var(--gold);
+    text-shadow: 0 0 14px rgba(244,196,48,0.8), 0 0 28px rgba(244,196,48,0.4);
+    font-weight: 700;
+    position: relative;
+  }
+
+  /* 分割线 */
+  .result-divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(244,196,48,0.3), transparent);
+    margin: 18px 0;
+  }
+
+  /* 情绪文案 */
+  .result-quote {
+    font-family: 'Ma Shan Zheng', 'Playfair Display', serif;
+    font-size: clamp(0.8rem, 3.5vw, 0.92rem);
+    font-style: normal;
+    color: rgba(245, 230, 200, 0.85);
+    text-align: center;
+    line-height: 1.9;
+    letter-spacing: 0.06em;
+  }
+
+  .result-quote .quote-pos {
+    color: var(--gold);
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(244,196,48,0.5);
+  }
+
+  /* 再查一次按钮 */
+  .btn-again {
+    margin-top: 24px;
+    width: 100%;
+    min-height: 52px;
+    background: transparent;
+    border: 1px solid rgba(244,196,48,0.5);
+    border-radius: 14px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    animation: fadeInUp 0.5s 0.7s ease both;
+  }
+  .btn-again:active {
+    background: rgba(244,196,48,0.08);
+  }
+
+  .result-footer {
+    margin-top: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 0.1em;
+    text-align: center;
+    animation: fadeInUp 0.5s 0.85s ease both;
+  }
+
+  /* ════════════════════════════════
+     KEYFRAMES
+  ════════════════════════════════ */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.88); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pulse-ring {
+    0%   { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  @keyframes spinSlow {
+    to { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div id="app">
+
+  <!-- ══ INTRO ══ -->
+  <section id="screen-intro" class="screen active">
+    <div class="intro-pi-symbol">π</div>
+    <h1 class="intro-title">π 中的你</h1>
+    <p class="intro-subtitle">在圆周率的无限长河中<br>找到属于你的那个坐标</p>
+
+    <div class="input-card">
+      <div class="input-label-row">
+        <div class="input-group">
+          <label>出生年份</label>
+          <input type="number" id="inp-year" placeholder="1990" min="1950" max="2010" inputmode="numeric">
+        </div>
+        <div class="input-group">
+          <label>月份</label>
+          <input type="number" id="inp-month" placeholder="08" min="1" max="12" inputmode="numeric">
+        </div>
+        <div class="input-group">
+          <label>日期</label>
+          <input type="number" id="inp-day" placeholder="15" min="1" max="31" inputmode="numeric">
+        </div>
+      </div>
+      <p class="input-hint">年份 1950 – 2010</p>
+      <div class="error-msg" id="error-msg"></div>
+      <button class="btn-search" id="btn-search" onclick="startSearch()">开始搜索</button>
+    </div>
+
+    <p class="intro-deco">π = 3.14159265358979323846…</p>
+  </section>
+
+  <!-- ══ SEARCHING ══ -->
+  <section id="screen-searching" class="screen">
+    <div class="search-scanner">
+      <div class="search-scanner-inner">π</div>
+    </div>
+    <div class="search-status" id="search-status">正在圆周率的无限长河中寻找你…</div>
+    <div class="search-digits-wrap">
+      <div class="search-digits" id="search-digits"></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+  </section>
+
+  <!-- ══ RESULT ══ -->
+  <section id="screen-result" class="screen">
+    <p class="result-eyebrow">π = 3.14159265358979…</p>
+    <div class="result-card">
+      <p class="result-card-label">你的生日藏在圆周率</p>
+      <div class="result-position-wrap">
+        <span class="result-position-pre">小数点后第</span>
+        <span class="result-position-num" id="result-num">0</span>
+        <span class="result-position-post">位</span>
+      </div>
+
+      <div class="result-pi-strip">
+        <span class="result-pi-text" id="result-pi-text"></span>
+      </div>
+
+      <div class="result-divider"></div>
+
+      <p class="result-quote" id="result-quote"></p>
+    </div>
+
+    <button class="btn-again" onclick="resetToIntro()">再查一次</button>
+    <p class="result-footer">π 是无限的 · 你是唯一的</p>
+  </section>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════
+   CANVAS BACKGROUND — Stars + Digit Rain
+════════════════════════════════════════════════ */
+(function initCanvas() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  // 星星
+  const STAR_COUNT = 140;
+  const stars = [];
+
+  // 数字雨列
+  const COLS = [];
+  const FONT_SIZE = 14;
+  let colCount = 0;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    initStars();
+    initCols();
+  }
+
+  function initStars() {
+    stars.length = 0;
+    for (let i = 0; i < STAR_COUNT; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.4 + 0.3,
+        vx: (Math.random() - 0.5) * 0.12,
+        vy: (Math.random() - 0.5) * 0.12,
+        a: Math.random() * 0.6 + 0.25,
+        flicker: Math.random() * 0.006 + 0.002,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  function initCols() {
+    COLS.length = 0;
+    colCount = Math.floor(W / FONT_SIZE);
+    for (let i = 0; i < colCount; i++) {
+      COLS.push({
+        y: -Math.random() * H,
+        speed: Math.random() * 0.5 + 0.2,
+        opacity: Math.random() * 0.04 + 0.02
+      });
+    }
+  }
+
+  function seededRand(seed) {
+    let s = seed;
+    return function() {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+
+  let frame = 0;
+  function draw() {
+    frame++;
+    ctx.clearRect(0, 0, W, H);
+
+    // 数字雨
+    ctx.font = `${FONT_SIZE}px "Space Mono", monospace`;
+    COLS.forEach((col, i) => {
+      const digit = String(Math.floor(frame * 0.3 + i * 7.3) % 10);
+      ctx.fillStyle = `rgba(125, 249, 255, ${col.opacity})`;
+      ctx.fillText(digit, i * FONT_SIZE, col.y);
+      col.y += col.speed;
+      if (col.y > H + FONT_SIZE) col.y = -FONT_SIZE;
+    });
+
+    // 星星
+    stars.forEach(s => {
+      s.phase += s.flicker;
+      const alpha = s.a * (0.7 + 0.3 * Math.sin(s.phase));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+      ctx.fill();
+      s.x += s.vx;
+      s.y += s.vy;
+      if (s.x < 0) s.x = W;
+      if (s.x > W) s.x = 0;
+      if (s.y < 0) s.y = H;
+      if (s.y > H) s.y = 0;
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  draw();
+})();
+
+
+/* ════════════════════════════════════════════════
+   CORE ALGORITHM
+════════════════════════════════════════════════ */
+function getBirthdayPosition(birthday) {
+  let hash = 0;
+  for (let i = 0; i < birthday.length; i++) {
+    hash = (hash * 31 + birthday.charCodeAt(i)) >>> 0;
+  }
+  return (hash % 4900000) + 100000;
+}
+
+// LCG 伪随机，用 position 作种子，保证确定性
+function lcgRand(seed) {
+  let s = seed >>> 0;
+  return function() {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+function generatePiSegment(birthdayDigits, position) {
+  const rand = lcgRand(position);
+  let prefix = '', suffix = '';
+  for (let i = 0; i < 15; i++) prefix += Math.floor(rand() * 10);
+  for (let i = 0; i < 15; i++) suffix += Math.floor(rand() * 10);
+  return { prefix, birthday: birthdayDigits, suffix };
+}
+
+
+/* ════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════ */
+let currentBirthday = ''; // YYYYMMDD
+let searchTimers = [];
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ─── 输入验证 ─── */
+function validateInputs() {
+  const y = parseInt(document.getElementById('inp-year').value, 10);
+  const m = parseInt(document.getElementById('inp-month').value, 10);
+  const d = parseInt(document.getElementById('inp-day').value, 10);
+  const errEl = document.getElementById('error-msg');
+
+  if (!y || !m || !d) { errEl.textContent = '请填写完整的出生年月日'; return null; }
+  if (y < 1950 || y > 2010) { errEl.textContent = '年份请填写 1950 ~ 2010'; return null; }
+  if (m < 1 || m > 12) { errEl.textContent = '月份请填写 1 ~ 12'; return null; }
+  if (d < 1 || d > 31) { errEl.textContent = '日期请填写 1 ~ 31'; return null; }
+
+  // 简单月份天数校验
+  const maxDays = new Date(y, m, 0).getDate();
+  if (d > maxDays) { errEl.textContent = `${y}年${m}月最多${maxDays}天`; return null; }
+
+  errEl.textContent = '';
+  const mm = String(m).padStart(2, '0');
+  const dd = String(d).padStart(2, '0');
+  return `${y}${mm}${dd}`;
+}
+
+/* ─── 开始搜索 ─── */
+function startSearch() {
+  const birthday = validateInputs();
+  if (!birthday) return;
+  currentBirthday = birthday;
+
+  showScreen('screen-searching');
+
+  // 进度条
+  requestAnimationFrame(() => {
+    const bar = document.getElementById('progress-bar');
+    bar.style.width = '0%';
+    requestAnimationFrame(() => { bar.style.width = '100%'; });
+  });
+
+  // 状态文案切换
+  const statusEl = document.getElementById('search-status');
+  const position = getBirthdayPosition(birthday);
+  const statusTexts = [
+    '正在圆周率的无限长河中寻找你…',
+    `扫描第 ${formatNumber(Math.floor(position * 0.4))} 位…`,
+    '信号捕获中，请稍候…',
+    `接近第 ${formatNumber(Math.floor(position * 0.85))} 位…`,
+  ];
+  let si = 0;
+  const statusTimer = setInterval(() => {
+    si = (si + 1) % statusTexts.length;
+    statusEl.style.opacity = '0';
+    setTimeout(() => {
+      statusEl.textContent = statusTexts[si];
+      statusEl.style.opacity = '0.9';
+    }, 150);
+  }, 520);
+  searchTimers.push(statusTimer);
+
+  // 数字滚动区
+  const digitsEl = document.getElementById('search-digits');
+  const digitsTimer = setInterval(() => {
+    let s = '';
+    for (let i = 0; i < 80; i++) s += Math.floor(Math.random() * 10);
+    digitsEl.textContent = s;
+  }, 80);
+  searchTimers.push(digitsTimer);
+
+  // 2s 后显示结果
+  const endTimer = setTimeout(() => {
+    searchTimers.forEach(clearInterval);
+    searchTimers = [];
+    showResult(birthday, position);
+  }, 2100);
+  searchTimers.push(endTimer);
+}
+
+/* ─── 显示结果 ─── */
+function showResult(birthday, position) {
+  showScreen('screen-result');
+
+  // 数字串
+  const segment = generatePiSegment(birthday, position);
+  const piTextEl = document.getElementById('result-pi-text');
+  piTextEl.innerHTML =
+    `…${segment.prefix}<span class="birthday-highlight">${segment.birthday}</span>${segment.suffix}…`;
+
+  // 情绪文案
+  const posFormatted = formatNumber(position);
+  const quotes = [
+    `π 是无限不循环的，却在第 <span class="quote-pos">${posFormatted}</span> 位，为你留了一个位置。`,
+    `数学家说 π 藏着所有数字的秘密，包括你。`,
+    `在无限之中，你从未缺席。`,
+    `宇宙用数字写下了你存在的证明。`,
+    `无限不重复，但始终有你。`,
+    `数字的河流，在第 <span class="quote-pos">${posFormatted}</span> 位，为你转了个弯。`,
+  ];
+  document.getElementById('result-quote').innerHTML = quotes[position % quotes.length];
+
+  // 数字跳动动画
+  const numEl = document.getElementById('result-num');
+  animateCounter(numEl, position, 1600);
+}
+
+/* ─── 数字递增动画 ─── */
+function animateCounter(el, target, duration) {
+  const start = performance.now();
+  function step(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    // easeOutExpo
+    const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+    const current = Math.round(eased * target);
+    el.textContent = formatNumber(current);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ─── 工具函数 ─── */
+function formatNumber(n) {
+  return n.toLocaleString('en-US');
+}
+
+/* ─── 重置 ─── */
+function resetToIntro() {
+  document.getElementById('inp-year').value = '';
+  document.getElementById('inp-month').value = '';
+  document.getElementById('inp-day').value = '';
+  document.getElementById('error-msg').textContent = '';
+  document.getElementById('progress-bar').style.transition = 'none';
+  document.getElementById('progress-bar').style.width = '0%';
+  showScreen('screen-intro');
+}
+
+/* ─── 回车触发搜索 ─── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('screen-intro').classList.contains('active')) {
+    startSearch();
+  }
+});
+
+/* ─── statusEl transition ─── */
+document.getElementById('search-status').style.transition = 'opacity 0.15s';
+</script>
+</body>
+</html>
